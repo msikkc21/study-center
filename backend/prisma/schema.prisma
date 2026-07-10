@@ -1,0 +1,142 @@
+// ============================================
+// Prisma Schema - Study Center KKN
+// Database: MySQL
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUM
+// ============================================
+
+enum Role {
+  ADMIN
+  PENGAJAR
+  PESERTA
+}
+
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum AttendanceStatus {
+  HADIR
+  IZIN
+  ALPHA
+}
+
+// ============================================
+// MODEL: User (Akun Login)
+// ============================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  password  String   @db.VarChar(255)
+  role      Role     @default(PESERTA)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relasi
+  student     Student?
+  pengajar    StudySession[] @relation("PengajarSessions")
+  attendances Attendance[]
+
+  @@map("users")
+}
+
+// ============================================
+// MODEL: Student (Data Peserta Belajar)
+// ============================================
+
+model Student {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  nik       String?  @unique @db.VarChar(20)
+  phone     String?  @db.VarChar(20)
+  address   String?  @db.Text
+  gender    Gender?
+  birthDate DateTime? @map("birth_date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relasi
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("students")
+}
+
+// ============================================
+// MODEL: Subject (Mata Pelajaran / Materi)
+// ============================================
+
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relasi
+  sessions StudySession[]
+
+  @@map("subjects")
+}
+
+// ============================================
+// MODEL: StudySession (Jadwal / Sesi Belajar)
+// ============================================
+
+model StudySession {
+  id          Int      @id @default(autoincrement())
+  subjectId   Int      @map("subject_id")
+  pengajarId  Int      @map("pengajar_id")
+  title       String   @db.VarChar(150)
+  description String?  @db.Text
+  sessionDate DateTime @map("session_date")
+  startTime   String   @map("start_time") @db.VarChar(5)  // format "HH:MM"
+  endTime     String   @map("end_time") @db.VarChar(5)    // format "HH:MM"
+  location    String?  @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relasi
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  pengajar    User         @relation("PengajarSessions", fields: [pengajarId], references: [id])
+  attendances Attendance[]
+
+  @@map("study_sessions")
+}
+
+// ============================================
+// MODEL: Attendance (Presensi / Absensi)
+// ============================================
+
+model Attendance {
+  id        Int              @id @default(autoincrement())
+  sessionId Int              @map("session_id")
+  userId    Int              @map("user_id")
+  status    AttendanceStatus @default(ALPHA)
+  note      String?          @db.Text
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  // Relasi
+  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Satu user hanya bisa punya 1 record presensi per sesi
+  @@unique([sessionId, userId])
+  @@map("attendances")
+}
+
