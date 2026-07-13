@@ -1,6 +1,6 @@
 // ============================================
-// Prisma Schema - Study Center KKN
-// Database: MySQL
+// Prisma Schema - Study Center Edumina
+// Database: MySQL 8.0+
 // ============================================
 
 generator client {
@@ -18,125 +18,102 @@ datasource db {
 // ============================================
 
 enum Role {
-  ADMIN
-  PENGAJAR
-  PESERTA
+  admin
+  operator
 }
 
-enum Gender {
-  LAKI_LAKI
-  PEREMPUAN
-}
-
-enum AttendanceStatus {
-  HADIR
-  IZIN
-  ALPHA
+enum Status {
+  active
+  inactive
 }
 
 // ============================================
-// MODEL: User (Akun Login)
+// MODEL: User (Akun Admin & Operator)
 // ============================================
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
-  email     String   @unique @db.VarChar(150)
-  password  String   @db.VarChar(255)
-  role      Role     @default(PESERTA)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(100)
+  email        String   @unique @db.VarChar(150)
+  password     String   @db.VarChar(255)
+  nama_lengkap String   @db.VarChar(150)
+  role         Role     @default(operator)
+  status       Status   @default(active)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
-  // Relasi
-  student     Student?
-  pengajar    StudySession[] @relation("PengajarSessions")
-  attendances Attendance[]
-
+  @@index([username])
+  @@index([email])
   @@map("users")
 }
 
 // ============================================
-// MODEL: Student (Data Peserta Belajar)
+// MODEL: Aktivitas (Kegiatan Study Center)
 // ============================================
 
-model Student {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique @map("user_id")
-  nik       String?  @unique @db.VarChar(20)
-  phone     String?  @db.VarChar(20)
-  address   String?  @db.Text
-  gender    Gender?
-  birthDate DateTime? @map("birth_date")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+model Aktivitas {
+  id         Int      @id @default(autoincrement())
+  judul      String   @db.VarChar(200)
+  tanggal    DateTime @db.Date
+  gambar     String   @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  // Relasi
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("students")
+  @@index([tanggal(sort: Desc)])
+  @@map("aktivitas")
 }
 
 // ============================================
-// MODEL: Subject (Mata Pelajaran / Materi)
+// MODEL: Produk
 // ============================================
 
-model Subject {
+model Produk {
   id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  nama_produk String   @db.VarChar(150)
+  gambar      String   @db.VarChar(255)
+  deskripsi   String?  @db.Text
+  link_wa     String?  @db.VarChar(255)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
-  // Relasi
-  sessions StudySession[]
-
-  @@map("subjects")
+  @@map("produk")
 }
 
 // ============================================
-// MODEL: StudySession (Jadwal / Sesi Belajar)
+// MODEL: Paket Edukasi
 // ============================================
 
-model StudySession {
-  id          Int      @id @default(autoincrement())
-  subjectId   Int      @map("subject_id")
-  pengajarId  Int      @map("pengajar_id")
-  title       String   @db.VarChar(150)
-  description String?  @db.Text
-  sessionDate DateTime @map("session_date")
-  startTime   String   @map("start_time") @db.VarChar(5)  // format "HH:MM"
-  endTime     String   @map("end_time") @db.VarChar(5)    // format "HH:MM"
-  location    String?  @db.VarChar(100)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+model PaketEdukasi {
+  id                Int      @id @default(autoincrement())
+  judul             String   @db.VarChar(200)
+  deskripsi_singkat String?  @db.Text
+  deskripsi_lengkap String?  @db.LongText
+  harga             Decimal  @db.Decimal(10, 2)
+  durasi            String?  @db.VarChar(100)
+  fasilitas         String?  @db.Text
+  gambar            String   @db.VarChar(255)
+  link_wa           String?  @db.VarChar(255)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
-  // Relasi
-  subject     Subject      @relation(fields: [subjectId], references: [id])
-  pengajar    User         @relation("PengajarSessions", fields: [pengajarId], references: [id])
-  attendances Attendance[]
-
-  @@map("study_sessions")
+  @@map("paket_edukasi")
 }
 
 // ============================================
-// MODEL: Attendance (Presensi / Absensi)
+// MODEL: Berita
 // ============================================
 
-model Attendance {
-  id        Int              @id @default(autoincrement())
-  sessionId Int              @map("session_id")
-  userId    Int              @map("user_id")
-  status    AttendanceStatus @default(ALPHA)
-  note      String?          @db.Text
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+model Berita {
+  id              Int      @id @default(autoincrement())
+  judul           String   @db.VarChar(250)
+  slug            String   @unique @db.VarChar(255)
+  isi_konten      String?  @db.LongText
+  tanggal_publish DateTime @db.Date
+  gambar          String   @db.VarChar(255)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
-  // Relasi
-  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Satu user hanya bisa punya 1 record presensi per sesi
-  @@unique([sessionId, userId])
-  @@map("attendances")
+  @@index([slug])
+  @@index([tanggal_publish(sort: Desc)])
+  @@map("berita")
 }
-
